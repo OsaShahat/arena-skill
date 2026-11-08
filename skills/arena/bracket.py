@@ -42,7 +42,7 @@ RUBRIC_PATH = os.path.join(HERE, "rubric.md")
 
 DEFAULT_AGENTS = 100
 QUICK_AGENTS = 16
-DEFAULT_WAVE = 10          # Claude Code runs at most 10 tool calls at once by default
+DEFAULT_WAVE = 3           # Clamp to available Codex worker slots
 ROOT = ".arena"
 LATEST = "LATEST"
 STATE_FILE = "arena.json"
@@ -825,7 +825,8 @@ def save_state(state):
 
 
 def _cmd(*parts):
-    return 'python3 "%s" %s' % (SELF, " ".join(parts))
+    prefix = "& " if os.name == "nt" else ""
+    return '%s"%s" "%s" %s' % (prefix, sys.executable, SELF, " ".join(parts))
 
 
 def _card_line(card):
@@ -964,9 +965,9 @@ def cmd_prompts(args):
             print("  %-26s %s" % (j["id"], j["prompt"]))
     if left:
         print("")
-        print("Each job is one Agent call: subagent_type general-purpose, description \"arena <job id>\",")
+        print("Use collaboration.spawn_agent with unique task_name and fork_turns=none, or followup_task for an idle role-appropriate worker;")
         print("prompt \"Read <prompt path> and follow it exactly. It is your whole brief.\"")
-        print("A wave is one message with all of its Agent calls. Let it finish before the next wave.")
+        print("Dispatch using Codex collaboration tools within available worker slots; wait before the next wave.")
     print("then: %s" % _cmd("next"))
     return 0
 
@@ -1179,7 +1180,7 @@ def build_parser():
     s.add_argument("--task-file", help="the task, word for word, as every competitor will get it")
     s.add_argument("--task", help="the task as a string, instead of --task-file")
     s.add_argument("--baseline-file", help="the answer the user was not satisfied with")
-    s.add_argument("--wave", type=int, default=DEFAULT_WAVE, help="parallel sub-agents per wave (default 10)")
+    s.add_argument("--wave", type=int, default=DEFAULT_WAVE, help="parallel sub-agents per wave (default 3; clamp to available slots)")
     s.set_defaults(func=cmd_init)
 
     s = sub.add_parser("next", parents=[common], help="what to do now")
